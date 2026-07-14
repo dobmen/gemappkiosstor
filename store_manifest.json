@@ -6,7 +6,7 @@
       "version": "1.0.0",
       "author": "dobmen",
       "description": "Real-time meteorological dashboard with 7-day forecasts, wind speed, and quick city switching.",
-      "icon_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/icons/weather.svg",
+      "icon_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/icons/weather.png",
       "script_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/apps/weather.py",
       "filename": "weather.py"
     }
