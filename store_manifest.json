@@ -3,7 +3,7 @@
     {
       "id": "weather",
       "name": "Live Weather",
-      "version": "1.0.0",
+      "version": "0.1.0",
       "author": "dobmen",
       "description": "Real-time meteorological dashboard with 7-day forecasts, wind speed, and quick city switching.",
       "icon_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/icons/weather.svg",
@@ -13,7 +13,7 @@
     {
       "id": "snake",
       "name": "Classic Snake",
-      "version": "1.0.0",
+      "version": "0.1.0",
       "author": "dobmen",
       "description": "Retro arcade snake game optimized for touchscreen displays with an on-screen D-pad and score tracking.",
       "icon_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/icons/snake.png",
