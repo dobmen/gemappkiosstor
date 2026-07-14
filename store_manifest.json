@@ -19,6 +19,16 @@
       "icon_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/icons/snake.png",
       "script_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/apps/snake.py",
       "filename": "snake.py"
+    },
+    {
+      "id": "browser",
+      "name": "Web Browser",
+      "version": "1.0.0",
+      "author": "dobmen",
+      "description": "Fast touchscreen web browser with smart Google search detection, quick bookmark buttons, and progress loading.",
+      "icon_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/icons/browser.png",
+      "script_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/apps/browser.py",
+      "filename": "browser.py"
     }
   ]
 }
