@@ -139,6 +139,13 @@ class SnakePage(QWidget):
         self.touch_start_pos = None
         self.on_close = on_close
 
+        # ==========================================================
+        # MOVED UP: Initialize timer BEFORE building settings controls!
+        # ==========================================================
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.game_tick)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
         # Color Cycle Palettes
         self.snake_palettes = [("#4CAF50", "🟩 Green"), ("#3B82F6", "🟦 Blue"), ("#A855F7", "🟪 Purple"), ("#EAB308", "🨨 Yellow")]
         self.food_palettes = [("#E24A4A", "🍎 Red"), ("#F97316", "🍊 Orange"), ("#EC4899", "🌸 Pink"), ("#EAB308", "⭐ Gold")]
@@ -201,7 +208,7 @@ class SnakePage(QWidget):
         right_panel.addWidget(self.btn_start)
 
         # =============================================================
-        # INTERACTIVE SETTINGS PANEL (Replaced Swipe Instruction Card)
+        # INTERACTIVE SETTINGS PANEL
         # =============================================================
         settings_card = QFrame()
         settings_card.setStyleSheet("background-color: #1C1C22; border: 1px solid #2C2C35; border-radius: 12px;")
@@ -278,17 +285,13 @@ class SnakePage(QWidget):
         right_panel.addWidget(settings_card)
         layout.addLayout(right_panel)
 
-        # Game Loop Timer
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.game_tick)
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-
     # =================================================================
     # SETTINGS LOGIC & CALLBACKS
     # =================================================================
     def set_speed(self, ms, active_btn):
         self.speed_ms = ms
-        if self.timer.isActive():
+        # SAFETY CHECK ADDED: Ensure timer exists before modifying it!
+        if hasattr(self, 'timer') and self.timer.isActive():
             self.timer.setInterval(self.speed_ms)
         for btn in self.spd_buttons:
             if btn == active_btn:
@@ -336,7 +339,8 @@ class SnakePage(QWidget):
     # CORE GAME LOGIC & GESTURES
     # =================================================================
     def exit_game(self):
-        self.timer.stop()
+        if hasattr(self, 'timer'):
+            self.timer.stop()
         self.board.is_running = False
         if self.on_close:
             self.on_close()
