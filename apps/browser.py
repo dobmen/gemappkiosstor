@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
+    from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings, QWebEnginePage
     WEBENGINE_AVAILABLE = True
 except ImportError:
     WEBENGINE_AVAILABLE = False
@@ -155,7 +156,30 @@ class BrowserPage(QWidget):
         # -------------------------------------------------------------
         if WEBENGINE_AVAILABLE:
             self.web = QWebEngineView()
-            self.web.setUrl(QUrl("https://www.google.com"))
+            
+            # --- PERSISTENT STORAGE SETUP ---
+            # This creates a folder to permanently save cookies, history, and logins
+            self.profile = QWebEngineProfile.defaultProfile()
+            data_path = os.path.abspath("browser_data")
+            os.makedirs(data_path, exist_ok=True)
+            
+            self.profile.setPersistentStoragePath(data_path)
+            self.profile.setCachePath(data_path)
+            self.profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
+            
+            # --- TOUCH & MOBILE SCROLLING OPTIMIZATIONS ---
+            settings = self.profile.settings()
+            settings.setAttribute(QWebEngineSettings.WebAttribute.ScrollAnimatorEnabled, True) # Kinetic smooth scrolling
+            settings.setAttribute(QWebEngineSettings.WebAttribute.TouchIconsEnabled, True)
+            settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
+            settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+            
+            # Apply profile to a new page and set it to the view
+            self.page = QWebEnginePage(self.profile, self.web)
+            self.web.setPage(self.page)
+            
+            # Force the widget to accept physical touchscreen drag events
+            self.web.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, True)
             
             # Connect navigation signals
             self.btn_back.clicked.connect(self.web.back)
@@ -167,6 +191,7 @@ class BrowserPage(QWidget):
             self.web.loadProgress.connect(self.progress_bar.setValue)
             self.web.loadFinished.connect(self.on_load_finished)
             
+            self.web.setUrl(QUrl("https://www.google.com"))
             layout.addWidget(self.web)
         else:
             fallback = QWidget()
