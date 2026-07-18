@@ -47,8 +47,9 @@ class NeonClock(QWidget):
         return QSize(100, 100)
 
     def load_settings(self):
-        # Automatically links to the dynamically generated editor menu
-        self.color = get_setting("neon_digital_color", "#E91E63") 
+        # Automatically links to the dynamically generated editor menu.
+        # #1ED760 provides that clean default Spotify-esque Green.
+        self.color = get_setting("neon_digital_color", "#1ED760") 
         self.bg = get_setting("neon_digital_bg", "#0C0C0E")
         
         self.lbl_time.setStyleSheet(f"color: {self.color}; background: transparent;")
