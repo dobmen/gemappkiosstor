@@ -49,6 +49,21 @@
         "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/screenshots/browser_1.png",
         "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/screenshots/browser_2.png"
       ]
+    },
+    {
+      "id": "neon_clock",
+      "type": "clockface",
+      "name": "Neon Digital",
+      "version": "1.0.0",
+      "author": "dobmen",
+      "category": "Clockfaces",
+      "storage_needed": "120 KB",
+      "description": "A vibrant, glowing cyberpunk-inspired digital clockface.",
+      "expanded_description": "Brighten up your Kiosk with this sleek, neon digital clockface. Once downloaded, it will automatically register in your Clockface Selector so you can customize its glowing colors and backgrounds.",
+      "icon_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/icons/neon_clock.png",
+      "script_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/clockfaces/neon_clock.py",
+      "filename": "neon_clock.py",
+      "screenshots": []
     }
   ]
 }
