@@ -3,7 +3,7 @@
     {
       "id": "weather",
       "name": "Live Weather",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": "dobmen",
       "category": "Utility",
       "storage_needed": "1.2 MB",
@@ -20,7 +20,7 @@
     {
       "id": "snake",
       "name": "Classic Snake",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": "dobmen",
       "category": "Games",
       "storage_needed": "850 KB",
@@ -36,7 +36,7 @@
     {
       "id": "browser",
       "name": "Web Browser",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": "dobmen",
       "category": "Productivity",
       "storage_needed": "2.5 MB",
@@ -54,7 +54,7 @@
       "id": "neon_clock",
       "type": "clockface",
       "name": "Neon Digital",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": "dobmen",
       "category": "Clockfaces",
       "storage_needed": "120 KB",
