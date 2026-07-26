@@ -3,7 +3,7 @@
     {
       "id": "weather",
       "name": "Live Weather",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "author": "dobmen",
       "category": "Utility",
       "storage_needed": "1.5 MB",
