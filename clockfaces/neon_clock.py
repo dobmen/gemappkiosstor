@@ -23,17 +23,8 @@ class NeonClock(QWidget):
         self.lbl_date = QLabel()
         self.lbl_date.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        # --- Create the Neon Glow Effects ---
-        self.glow_time = QGraphicsDropShadowEffect()
-        self.glow_time.setBlurRadius(50)  
-        self.glow_time.setOffset(0, 0)    
-        self.lbl_time.setGraphicsEffect(self.glow_time)
-
-        self.glow_date = QGraphicsDropShadowEffect()
-        self.glow_date.setBlurRadius(25)
-        self.glow_date.setOffset(0, 0)
-        self.lbl_date.setGraphicsEffect(self.glow_date)
-
+        # QGraphicsDropShadowEffect removed because it causes QPainter core dumps on Linux during grab()
+        
         self.clock_layout.addWidget(self.lbl_time)
         self.clock_layout.addWidget(self.lbl_date)
         
@@ -51,11 +42,9 @@ class NeonClock(QWidget):
         self.color = get_setting("neon_digital_color", "#1ED760") 
         self.bg = get_setting("neon_digital_bg", "#0C0C0E")
         
-        self.lbl_time.setStyleSheet(f"color: {self.color}; background: transparent;")
+        # Simulate neon with a slight text shadow in CSS where possible, or just vivid colors
+        self.lbl_time.setStyleSheet(f"color: {self.color}; background: transparent; font-weight: bold;")
         self.lbl_date.setStyleSheet(f"color: {self.color}; background: transparent;")
-        
-        self.glow_time.setColor(QColor(self.color))
-        self.glow_date.setColor(QColor(self.color))
         
         self.resizeEvent(None)
         self.update()
