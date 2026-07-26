@@ -10,8 +10,9 @@ try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
     from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings, QWebEnginePage
     WEBENGINE_AVAILABLE = True
-except ImportError:
+except Exception as e:
     WEBENGINE_AVAILABLE = False
+    WEBENGINE_ERROR = str(e)
 
 
 def get_scale_factor():
@@ -210,7 +211,7 @@ class BrowserPage(QWidget):
             title_lbl.setFont(QFont("Google Sans", int(32 * self.scale), QFont.Weight.Bold))
             title_lbl.setStyleSheet("color: white;")
             
-            desc_lbl = QLabel("Please install 'PyQt6-WebEngine' in your virtual environment to render websites.")
+            desc_lbl = QLabel(f"WebEngine failed to load:\n{WEBENGINE_ERROR}\n\nPlease install 'PyQt6-WebEngine' or its dependencies (like libnss3).")
             desc_lbl.setStyleSheet(f"color: #E24A4A; font-size: {int(18 * self.scale)}px; margin-top: 10px;")
             
             fb_layout.addWidget(title_lbl, alignment=Qt.AlignmentFlag.AlignCenter)
