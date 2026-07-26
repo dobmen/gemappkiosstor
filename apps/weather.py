@@ -94,12 +94,35 @@ class GraphWidget(QWidget):
         self.labels = []
         self.mode = "line"
         self.color = QColor("#5A8DEF")
+        self.selected_index = -1
         
     def set_data(self, data, labels, mode="line", color="#5A8DEF"):
         self.data = data
         self.labels = labels
         self.mode = mode
         self.color = QColor(color)
+        self.selected_index = -1
+        self.update()
+        
+    def mousePressEvent(self, event):
+        if not self.data: return
+        w = self.width()
+        pad_l = int(60 * self.scale)
+        pad_r = int(20 * self.scale)
+        graph_w = w - pad_l - pad_r
+        
+        x = event.pos().x()
+        if x < pad_l or x > pad_l + graph_w:
+            self.selected_index = -1
+        else:
+            n = len(self.data)
+            step_x = graph_w / (n - 1) if self.mode == "line" else graph_w / n
+            # For bar, there is an offset
+            if self.mode == "bar":
+                idx = int((x - pad_l) / step_x)
+            else:
+                idx = round((x - pad_l) / step_x)
+            self.selected_index = max(0, min(n - 1, idx))
         self.update()
         
     def paintEvent(self, event):
@@ -185,6 +208,40 @@ class GraphWidget(QWidget):
             if i % max(1, (n // 6)) == 0:
                 x = pad_l + i * step_x + (step_x / 2 if self.mode == "bar" else 0)
                 painter.drawText(int(x) - 30, pad_t + graph_h + 10, 60, 20, Qt.AlignmentFlag.AlignCenter, lbl)
+                
+        if hasattr(self, 'selected_index') and self.selected_index != -1 and self.selected_index < len(self.data):
+            idx = self.selected_index
+            val = self.data[idx]
+            lbl = self.labels[idx]
+            
+            x = pad_l + idx * step_x + (step_x / 2 if self.mode == "bar" else 0)
+            
+            painter.setPen(QPen(QColor(255, 255, 255, 200), 1, Qt.PenStyle.DashLine))
+            painter.drawLine(int(x), pad_t, int(x), pad_t + graph_h)
+            
+            if self.mode == "line":
+                y = pad_t + graph_h - ((val - min_v) / rng * graph_h)
+            else:
+                y = pad_t + graph_h - (val / max_v * graph_h)
+                
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(255, 255, 255))
+            painter.drawEllipse(int(x) - 4, int(y) - 4, 8, 8)
+            
+            text = f"{lbl}  |  {val:.1f}"
+            fm = painter.fontMetrics()
+            tw = fm.horizontalAdvance(text) + 20
+            th = fm.height() + 10
+            tx = int(x) - tw // 2
+            if tx < pad_l: tx = pad_l
+            if tx + tw > w - pad_r: tx = w - pad_r - tw
+            ty = int(y) - th - 10
+            if ty < 0: ty = int(y) + 10
+            
+            painter.setBrush(QColor(0, 0, 0, 220))
+            painter.drawRoundedRect(tx, ty, tw, th, 5, 5)
+            painter.setPen(QColor(255, 255, 255))
+            painter.drawText(tx, ty, tw, th, Qt.AlignmentFlag.AlignCenter, text)
 
 
 class DetailPopup(QWidget):
@@ -198,7 +255,7 @@ class DetailPopup(QWidget):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         self.container = QFrame()
-        self.container.setFixedSize(int(800*self.scale), int(550*self.scale))
+        self.container.setFixedSize(int(700*self.scale), int(450*self.scale))
         self.container.setStyleSheet("background-color: #1A1A22; border-radius: 20px; border: 1px solid #333340;")
         
         c_layout = QVBoxLayout(self.container)
@@ -245,8 +302,8 @@ class DetailPopup(QWidget):
             
         for key in data_dict.keys():
             btn = QPushButton(key.capitalize())
-            btn.setFixedHeight(int(40*self.scale))
-            btn.setStyleSheet(f"background-color: rgba(255,255,255,20); color: white; border-radius: {int(20*self.scale)}px; font-weight: bold; padding: 0 {int(20*self.scale)}px; border: none;")
+            btn.setFixedHeight(int(36*self.scale))
+            btn.setStyleSheet(f"background-color: rgba(255,255,255,20); color: white; border-radius: {int(18*self.scale)}px; font-weight: bold; padding: 0 {int(15*self.scale)}px; border: none;")
             btn.clicked.connect(lambda checked, k=key: self.show_metric(k))
             self.toggles_layout.addWidget(btn)
             
