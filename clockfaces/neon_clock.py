@@ -71,10 +71,11 @@ class NeonClock(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
-        radius = max(36, int(36 * (self.height() / 600.0)))
-        path = QPainterPath()
-        path.addRoundedRect(0, 0, self.width(), self.height(), radius, radius)
-        painter.setClipPath(path)
+        if self.property("is_preview"):
+            radius = max(36, int(36 * (self.height() / 600.0)))
+            path = QPainterPath()
+            path.addRoundedRect(0, 0, self.width(), self.height(), radius, radius)
+            painter.setClipPath(path)
         
         draw_custom_background(painter, self.bg, self.width(), self.height())
         painter.end()
