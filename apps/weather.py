@@ -4,11 +4,11 @@ import urllib.request
 import urllib.parse
 from datetime import datetime
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer, QSize
-from PyQt6.QtGui import QFont, QGuiApplication, QColor, QPainter, QLinearGradient
+from PyQt6.QtGui import QFont, QGuiApplication, QColor, QPainter, QLinearGradient, QPainterPath, QPen
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
     QLabel, QPushButton, QFrame, QScrollArea, QLineEdit, QListWidget, QListWidgetItem,
-    QStackedWidget, QSizePolicy
+    QStackedWidget, QSizePolicy, QScroller
 )
 
 WEATHER_CODES = {
@@ -74,7 +74,8 @@ class FetchWeatherThread(QThread):
             f"https://api.open-meteo.com/v1/forecast?"
             f"latitude={self.lat}&longitude={self.lon}&"
             f"current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,is_day,visibility&"
-            f"daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&timezone=auto"
+            f"daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&"
+            f"hourly=temperature_2m,precipitation,wind_speed_10m,uv_index&forecast_days=10&timezone=auto"
         )
         try:
             req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -85,15 +86,208 @@ class FetchWeatherThread(QThread):
             self.on_error.emit(str(e))
 
 
-class GlassCard(QFrame):
-    def __init__(self, title, icon, value="--"):
+class GraphWidget(QWidget):
+    def __init__(self):
         super().__init__()
         self.scale = get_scale_factor()
+        self.data = []
+        self.labels = []
+        self.mode = "line"
+        self.color = QColor("#5A8DEF")
+        
+    def set_data(self, data, labels, mode="line", color="#5A8DEF"):
+        self.data = data
+        self.labels = labels
+        self.mode = mode
+        self.color = QColor(color)
+        self.update()
+        
+    def paintEvent(self, event):
+        if not self.data: return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        w = self.width()
+        h = self.height()
+        
+        pad_l = int(60 * self.scale)
+        pad_r = int(20 * self.scale)
+        pad_t = int(30 * self.scale)
+        pad_b = int(40 * self.scale)
+        
+        graph_w = w - pad_l - pad_r
+        graph_h = h - pad_t - pad_b
+        
+        min_v = min(self.data)
+        max_v = max(self.data)
+        
+        if self.mode == "bar":
+            min_v = 0
+            if max_v == 0: max_v = 1
+        else:
+            if max_v == min_v:
+                max_v += 1
+                min_v -= 1
+                
+        rng = max_v - min_v
+        
+        painter.setPen(QPen(QColor(255, 255, 255, 50), 1))
+        painter.drawLine(pad_l, pad_t, pad_l + graph_w, pad_t)
+        painter.drawLine(pad_l, pad_t + graph_h, pad_l + graph_w, pad_t + graph_h)
+        
+        painter.setPen(QPen(QColor(255, 255, 255, 150)))
+        painter.setFont(QFont("Google Sans", int(12 * self.scale)))
+        painter.drawText(0, pad_t - 10, pad_l - 10, 20, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, f"{max_v:.1f}")
+        painter.drawText(0, pad_t + graph_h - 10, pad_l - 10, 20, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, f"{min_v:.1f}")
+        
+        n = len(self.data)
+        if n < 2: return
+        
+        step_x = graph_w / (n - 1) if self.mode == "line" else graph_w / n
+        
+        if self.mode == "line":
+            path = QPainterPath()
+            for i, val in enumerate(self.data):
+                x = pad_l + i * step_x
+                y = pad_t + graph_h - ((val - min_v) / rng * graph_h)
+                if i == 0:
+                    path.moveTo(x, y)
+                else:
+                    path.lineTo(x, y)
+            
+            pen = QPen(self.color, 3)
+            painter.setPen(pen)
+            painter.drawPath(path)
+            
+            path.lineTo(pad_l + graph_w, pad_t + graph_h)
+            path.lineTo(pad_l, pad_t + graph_h)
+            
+            grad = QLinearGradient(0, pad_t, 0, pad_t + graph_h)
+            fill_color = QColor(self.color)
+            fill_color.setAlpha(100)
+            grad.setColorAt(0, fill_color)
+            grad.setColorAt(1, QColor(0, 0, 0, 0))
+            painter.fillPath(path, grad)
+            
+        elif self.mode == "bar":
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(self.color)
+            bar_w = max(2, int(step_x * 0.7))
+            for i, val in enumerate(self.data):
+                if val <= 0: continue
+                x = pad_l + i * step_x + (step_x - bar_w) / 2
+                bh = (val / max_v) * graph_h
+                y = pad_t + graph_h - bh
+                painter.drawRect(int(x), int(y), int(bar_w), int(bh))
+                
+        painter.setPen(QPen(QColor(255, 255, 255, 150)))
+        for i, lbl in enumerate(self.labels):
+            if i % max(1, (n // 6)) == 0:
+                x = pad_l + i * step_x + (step_x / 2 if self.mode == "bar" else 0)
+                painter.drawText(int(x) - 30, pad_t + graph_h + 10, 60, 20, Qt.AlignmentFlag.AlignCenter, lbl)
+
+
+class DetailPopup(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.scale = get_scale_factor()
+        self.hide()
+        self.setStyleSheet("background-color: rgba(0, 0, 0, 180);")
+        
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        self.container = QFrame()
+        self.container.setFixedSize(int(800*self.scale), int(550*self.scale))
+        self.container.setStyleSheet("background-color: #1A1A22; border-radius: 20px; border: 1px solid #333340;")
+        
+        c_layout = QVBoxLayout(self.container)
+        c_layout.setContentsMargins(int(30*self.scale), int(30*self.scale), int(30*self.scale), int(30*self.scale))
+        
+        header = QHBoxLayout()
+        self.lbl_title = QLabel("Details")
+        self.lbl_title.setFont(QFont("Google Sans", int(24*self.scale), QFont.Weight.Bold))
+        self.lbl_title.setStyleSheet("color: white; background: transparent; border: none;")
+        
+        btn_close = QPushButton("✕")
+        btn_close.setFixedSize(int(40*self.scale), int(40*self.scale))
+        btn_close.setStyleSheet("QPushButton { background-color: rgba(255,255,255,20); color: white; border-radius: 20px; border: none; } QPushButton:hover { background-color: #E24A4A; }")
+        btn_close.clicked.connect(self.hide)
+        
+        header.addWidget(self.lbl_title)
+        header.addStretch()
+        header.addWidget(btn_close)
+        c_layout.addLayout(header)
+        
+        self.graph = GraphWidget()
+        c_layout.addWidget(self.graph, stretch=1)
+        
+        self.toggles_layout = QHBoxLayout()
+        self.toggles_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.toggles_layout.setSpacing(int(15*self.scale))
+        c_layout.addLayout(self.toggles_layout)
+        
+        layout.addWidget(self.container)
+        
+        self.current_data = {}
+        self.current_labels = []
+
+    def set_title(self, title):
+        self.lbl_title.setText(title)
+        
+    def populate(self, data_dict, labels):
+        self.current_data = data_dict
+        self.current_labels = labels
+        
+        while self.toggles_layout.count():
+            item = self.toggles_layout.takeAt(0)
+            if item.widget(): item.widget().deleteLater()
+            
+        for key in data_dict.keys():
+            btn = QPushButton(key.capitalize())
+            btn.setFixedHeight(int(40*self.scale))
+            btn.setStyleSheet(f"background-color: rgba(255,255,255,20); color: white; border-radius: {int(20*self.scale)}px; font-weight: bold; padding: 0 {int(20*self.scale)}px; border: none;")
+            btn.clicked.connect(lambda checked, k=key: self.show_metric(k))
+            self.toggles_layout.addWidget(btn)
+            
+        if data_dict:
+            self.show_metric(list(data_dict.keys())[0])
+            self.raise_()
+            self.show()
+            
+    def show_metric(self, key):
+        if key in self.current_data:
+            color = "#5A8DEF"
+            mode = "line"
+            if key.lower() == "precipitation":
+                mode = "bar"
+                color = "#3EA6FF"
+            elif key.lower() == "uv index":
+                color = "#F39C12"
+            elif key.lower() == "wind":
+                color = "#8E44AD"
+            self.graph.set_data(self.current_data[key], self.current_labels, mode, color)
+
+    def mousePressEvent(self, event):
+        if not self.container.geometry().contains(event.pos()):
+            self.hide()
+
+
+class GlassCard(QFrame):
+    clicked = pyqtSignal(str)
+    def __init__(self, title, icon, metric_id, value="--"):
+        super().__init__()
+        self.metric_id = metric_id
+        self.scale = get_scale_factor()
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet("""
             GlassCard {
                 background-color: rgba(255, 255, 255, 30);
                 border-radius: 16px;
                 border: 1px solid rgba(255, 255, 255, 60);
+            }
+            GlassCard:hover {
+                background-color: rgba(255, 255, 255, 50);
             }
         """)
         layout = QVBoxLayout(self)
@@ -122,18 +316,29 @@ class GlassCard(QFrame):
 
     def set_value(self, val):
         self.lbl_value.setText(str(val))
+        
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit(self.metric_id)
+        super().mouseReleaseEvent(event)
 
 
 class ForecastCard(QFrame):
-    def __init__(self, day_name, code, max_temp, min_temp):
+    clicked = pyqtSignal(int)
+    def __init__(self, index, day_name, code, max_temp, min_temp):
         super().__init__()
+        self.index = index
         self.scale = get_scale_factor()
         self.setFixedSize(int(130 * self.scale), int(140 * self.scale))
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet("""
             ForecastCard {
                 background-color: rgba(255, 255, 255, 30);
                 border: 1px solid rgba(255, 255, 255, 60);
                 border-radius: 16px;
+            }
+            ForecastCard:hover {
+                background-color: rgba(255, 255, 255, 50);
             }
         """)
         layout = QVBoxLayout(self)
@@ -156,6 +361,11 @@ class ForecastCard(QFrame):
         layout.addWidget(lbl_day, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(lbl_icon, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(lbl_temps, alignment=Qt.AlignmentFlag.AlignCenter)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit(self.index)
+        super().mouseReleaseEvent(event)
 
 
 class GradientBackground(QWidget):
@@ -282,6 +492,7 @@ class MainWeatherScreen(GradientBackground):
         super().__init__()
         self.main_app = main_app
         self.scale = get_scale_factor()
+        self.last_data = {}
         
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(int(20*self.scale), int(20*self.scale), int(20*self.scale), int(20*self.scale))
@@ -293,6 +504,7 @@ class MainWeatherScreen(GradientBackground):
         self.nav_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         self.nav_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.nav_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        QScroller.grabGesture(self.nav_scroll.viewport(), QScroller.ScrollerGestureType.LeftMouseButtonGesture)
         
         self.nav_container = QWidget()
         self.nav_container.setStyleSheet("background: transparent;")
@@ -305,6 +517,9 @@ class MainWeatherScreen(GradientBackground):
         self.content_scroll = QScrollArea()
         self.content_scroll.setWidgetResizable(True)
         self.content_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        self.content_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.content_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        QScroller.grabGesture(self.content_scroll.viewport(), QScroller.ScrollerGestureType.LeftMouseButtonGesture)
         
         content = QWidget()
         content.setStyleSheet("background: transparent;")
@@ -334,17 +549,46 @@ class MainWeatherScreen(GradientBackground):
         self.c_layout.addWidget(self.lbl_cond)
         self.c_layout.addSpacing(int(20*self.scale))
         
+        # --- Forecast ---
+        lbl_forecast = QLabel("10-Day Forecast")
+        lbl_forecast.setFont(QFont("Google Sans", int(18*self.scale), QFont.Weight.Bold))
+        lbl_forecast.setStyleSheet("color: rgba(255,255,255,180); background: transparent;")
+        self.c_layout.addWidget(lbl_forecast)
+        
+        self.forecast_scroll = QScrollArea()
+        self.forecast_scroll.setFixedHeight(int(170*self.scale))
+        self.forecast_scroll.setWidgetResizable(True)
+        self.forecast_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        self.forecast_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.forecast_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        QScroller.grabGesture(self.forecast_scroll.viewport(), QScroller.ScrollerGestureType.LeftMouseButtonGesture)
+        
+        self.forecast_container = QWidget()
+        self.forecast_container.setStyleSheet("background: transparent;")
+        self.forecast_layout = QHBoxLayout(self.forecast_container)
+        self.forecast_layout.setContentsMargins(0,0,0,0)
+        self.forecast_layout.setSpacing(int(15*self.scale))
+        self.forecast_scroll.setWidget(self.forecast_container)
+        
+        self.c_layout.addWidget(self.forecast_scroll)
+        self.c_layout.addSpacing(int(20*self.scale))
+        
         # --- Grid ---
         self.grid_layout = QGridLayout()
         self.grid_layout.setSpacing(int(15*self.scale))
         
-        self.card_feels = GlassCard("Feels Like", "🌡️")
-        self.card_rain = GlassCard("Precipitation", "☔")
-        self.card_uv = GlassCard("UV Index", "☀️")
-        self.card_wind = GlassCard("Wind", "💨")
-        self.card_hum = GlassCard("Humidity", "💧")
-        self.card_vis = GlassCard("Visibility", "👁️")
-        self.card_sun = GlassCard("Sunrise / Sunset", "🌅")
+        self.card_feels = GlassCard("Feels Like", "🌡️", "temperature_2m")
+        self.card_rain = GlassCard("Precipitation", "☔", "precipitation")
+        self.card_uv = GlassCard("UV Index", "☀️", "uv_index")
+        self.card_wind = GlassCard("Wind", "💨", "wind_speed_10m")
+        self.card_hum = GlassCard("Humidity", "💧", "humidity")
+        self.card_vis = GlassCard("Visibility", "👁️", "visibility")
+        self.card_sun = GlassCard("Sunrise / Sunset", "🌅", "sunrise")
+        
+        self.card_feels.clicked.connect(self.on_metric_clicked)
+        self.card_rain.clicked.connect(self.on_metric_clicked)
+        self.card_uv.clicked.connect(self.on_metric_clicked)
+        self.card_wind.clicked.connect(self.on_metric_clicked)
         
         self.grid_layout.addWidget(self.card_feels, 0, 0)
         self.grid_layout.addWidget(self.card_rain, 0, 1)
@@ -355,22 +599,16 @@ class MainWeatherScreen(GradientBackground):
         self.grid_layout.addWidget(self.card_sun, 2, 0, 1, 3)
         
         self.c_layout.addLayout(self.grid_layout)
-        self.c_layout.addSpacing(int(20*self.scale))
-        
-        # --- Forecast ---
-        lbl_forecast = QLabel("5-Day Forecast")
-        lbl_forecast.setFont(QFont("Google Sans", int(18*self.scale), QFont.Weight.Bold))
-        lbl_forecast.setStyleSheet("color: rgba(255,255,255,180); background: transparent;")
-        self.c_layout.addWidget(lbl_forecast)
-        
-        self.forecast_layout = QHBoxLayout()
-        self.forecast_layout.setSpacing(int(15*self.scale))
-        self.c_layout.addLayout(self.forecast_layout)
         
         self.content_scroll.setWidget(content)
         self.layout.addWidget(self.content_scroll, stretch=1)
         
         self.worker = None
+        self.popup = DetailPopup(self)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.popup.setGeometry(self.rect())
 
     def build_nav(self):
         while self.nav_layout.count():
@@ -428,6 +666,7 @@ class MainWeatherScreen(GradientBackground):
         self.lbl_cond.setText(f"Error: {err}")
 
     def update_ui(self, data):
+        self.last_data = data
         c = data.get("current", {})
         d = data.get("daily", {})
         
@@ -471,11 +710,60 @@ class MainWeatherScreen(GradientBackground):
         codes = d.get("weather_code", [])
         maxs = d.get("temperature_2m_max", [])
         mins = d.get("temperature_2m_min", [])
+        times = d.get("time", [])
         
-        days = ["Today", "Tomorrow", "Day 3", "Day 4", "Day 5"]
-        for i in range(min(5, len(codes))):
-            card = ForecastCard(days[i], codes[i], maxs[i], mins[i])
+        for i in range(min(10, len(codes))):
+            day_name = "Today" if i == 0 else "Tomorrow" if i == 1 else datetime.fromisoformat(times[i]).strftime("%A")
+            card = ForecastCard(i, day_name, codes[i], maxs[i], mins[i])
+            card.clicked.connect(self.on_day_clicked)
             self.forecast_layout.addWidget(card)
+
+    def on_metric_clicked(self, metric_id):
+        if not self.last_data or metric_id not in ["temperature_2m", "precipitation", "wind_speed_10m", "uv_index"]:
+            return
+        self.open_graph_for_day(0, default_metric=metric_id)
+
+    def on_day_clicked(self, day_index):
+        if not self.last_data: return
+        self.open_graph_for_day(day_index)
+        
+    def open_graph_for_day(self, day_index, default_metric="temperature_2m"):
+        h = self.last_data.get("hourly", {})
+        d = self.last_data.get("daily", {})
+        
+        start_idx = day_index * 24
+        end_idx = start_idx + 24
+        
+        labels = [f"{i}:00" for i in range(24)]
+        
+        data_dict = {}
+        if "temperature_2m" in h:
+            data_dict["Temperature"] = h["temperature_2m"][start_idx:end_idx]
+        if "precipitation" in h:
+            data_dict["Precipitation"] = h["precipitation"][start_idx:end_idx]
+        if "wind_speed_10m" in h:
+            data_dict["Wind"] = h["wind_speed_10m"][start_idx:end_idx]
+        if "uv_index" in h:
+            data_dict["UV Index"] = h["uv_index"][start_idx:end_idx]
+            
+        times = d.get("time", [])
+        day_str = "Selected Day"
+        if day_index < len(times):
+            day_str = datetime.fromisoformat(times[day_index]).strftime("%A, %b %d")
+            
+        self.popup.set_title(day_str)
+        
+        # map metric_id to pretty name
+        mapping = {
+            "temperature_2m": "Temperature",
+            "precipitation": "Precipitation",
+            "wind_speed_10m": "Wind",
+            "uv_index": "UV Index"
+        }
+        
+        self.popup.populate(data_dict, labels)
+        if mapping.get(default_metric) in data_dict:
+            self.popup.show_metric(mapping[default_metric])
 
 
 class WeatherPage(QStackedWidget):
@@ -516,7 +804,6 @@ class WeatherPage(QStackedWidget):
             }, f)
 
     def add_location(self, loc):
-        # Check if exists
         for i, existing in enumerate(self.locations):
             if existing["name"] == loc["name"]:
                 self.current_index = i
@@ -528,6 +815,19 @@ class WeatherPage(QStackedWidget):
         self.current_index = len(self.locations) - 1
         self.save_locations()
         self.switch_to_main()
+
+    def remove_location(self, idx):
+        if 0 <= idx < len(self.locations):
+            self.locations.pop(idx)
+            if self.current_index >= len(self.locations):
+                self.current_index = max(0, len(self.locations) - 1)
+            self.save_locations()
+            
+            if not self.locations:
+                self.show_add_location()
+            else:
+                self.screen_main.build_nav()
+                self.screen_main.fetch_data()
 
     def show_add_location(self):
         self.screen_add.search_input.clear()
@@ -545,16 +845,3 @@ class WeatherPage(QStackedWidget):
             self.save_locations()
             self.screen_main.build_nav()
             self.screen_main.fetch_data()
-            
-    def remove_location(self, idx):
-        if 0 <= idx < len(self.locations):
-            self.locations.pop(idx)
-            if self.current_index >= len(self.locations):
-                self.current_index = max(0, len(self.locations) - 1)
-            self.save_locations()
-            
-            if not self.locations:
-                self.show_add_location()
-            else:
-                self.screen_main.build_nav()
-                self.screen_main.fetch_data()
