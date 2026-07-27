@@ -31,38 +31,6 @@ class YoutubePage(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # -------------------------------------------------------------
-        # 1. TOP NAV BAR (EXIT BUTTON)
-        # -------------------------------------------------------------
-        # We need a way to exit the app since it's full screen without OS chrome
-        top_bar = QFrame()
-        top_bar.setFixedHeight(int(54 * self.scale))
-        top_bar.setStyleSheet("background-color: #121215; border-bottom: 1px solid #282830;")
-        
-        top_layout = QHBoxLayout(top_bar)
-        top_layout.setContentsMargins(int(15 * self.scale), int(7 * self.scale), int(15 * self.scale), int(7 * self.scale))
-        top_layout.setSpacing(int(15 * self.scale))
-        
-        self.btn_exit = QPushButton("🏠 Home")
-        self.btn_exit.setFixedSize(int(100 * self.scale), int(40 * self.scale))
-        self.btn_exit.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_exit.setStyleSheet(f"""
-            QPushButton {{ background-color: #E24A4A; color: white; font-size: {int(15 * self.scale)}px; font-weight: bold; border-radius: 8px; }}
-            QPushButton:hover {{ background-color: #C0392B; }}
-        """)
-        if self.on_close:
-            self.btn_exit.clicked.connect(self.on_close)
-            
-        top_layout.addWidget(self.btn_exit)
-        
-        # Add a title label just to fill space nicely
-        title_lbl = QLabel("YouTube")
-        title_lbl.setFont(QFont("Google Sans", int(18 * self.scale), QFont.Weight.Bold))
-        title_lbl.setStyleSheet("color: white;")
-        top_layout.addWidget(title_lbl)
-        top_layout.addStretch()
-        
-        layout.addWidget(top_bar)
 
         # -------------------------------------------------------------
         # 2. WEB ENGINE VIEW & PERSISTENT PROFILE
