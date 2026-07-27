@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
-    from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings, QWebEnginePage
+    from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings, QWebEnginePage as _QWebEnginePage
     WEBENGINE_AVAILABLE = True
 except Exception as e:
     WEBENGINE_AVAILABLE = False
@@ -88,7 +88,7 @@ class YoutubePage(QWidget):
             settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
             settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
             
-            self.page = QWebEnginePage(self.profile, self.web)
+            self.page = _QWebEnginePage(self.profile, self.web)
             self.web.setPage(self.page)
             self.web.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, True)
             
