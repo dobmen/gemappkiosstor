@@ -64,6 +64,20 @@
       "script_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/clockfaces/neon_clock.py",
       "filename": "neon_clock.py",
       "screenshots": []
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube TV",
+      "version": "1.0.0",
+      "author": "dobmen",
+      "category": "Entertainment",
+      "storage_needed": "2.8 MB",
+      "description": "The official YouTube Smart TV experience with persistent login and 1080p full-screen video support.",
+      "expanded_description": "Watch your favorite YouTube creators in a gorgeous, distraction-free environment optimized specifically for large screens and touch input. This app securely remembers your Google login so you can seamlessly access your subscriptions and history.",
+      "icon_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/icons/youtube.png",
+      "script_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/apps/youtube.py",
+      "filename": "youtube.py",
+      "screenshots": []
     }
   ]
 }
