@@ -56,7 +56,7 @@ class YoutubePage(QWidget):
         top_layout.addWidget(self.btn_exit)
         
         # Add a title label just to fill space nicely
-        title_lbl = QLabel("YouTube TV")
+        title_lbl = QLabel("YouTube")
         title_lbl.setFont(QFont("Google Sans", int(18 * self.scale), QFont.Weight.Bold))
         title_lbl.setStyleSheet("color: white;")
         top_layout.addWidget(title_lbl)
