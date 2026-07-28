@@ -78,6 +78,20 @@
       "script_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/apps/youtube.py",
       "filename": "youtube.py",
       "screenshots": []
+    },
+    {
+      "id": "calculator",
+      "name": "Calculator",
+      "version": "1.0.0",
+      "author": "dobmen",
+      "category": "Utility",
+      "storage_needed": "240 KB",
+      "description": "Sleek and touch-friendly calculator for quick math on your Kiosk.",
+      "expanded_description": "Need to do some quick math? The Calculator app features a beautiful, high-contrast user interface with large touch targets perfectly sized for your Kiosk display. Includes basic arithmetic operations and percentage calculations.",
+      "icon_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/icons/calculator.jpg",
+      "script_url": "https://raw.githubusercontent.com/dobmen/gemappkiosstor/main/apps/calculator.py",
+      "filename": "calculator.py",
+      "screenshots": []
     }
   ]
 }
